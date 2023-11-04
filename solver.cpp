@@ -473,8 +473,8 @@ int main()
 {
     read_instance();
     convert_auxiliars();
-    vector<vector<vector<bool>>> sol_bit;
-    vector<vector<int>> sol;
+    vector<vector<vector<bool>>> sol_bit(n, vector<vector<bool>>(h, vector<bool>(CT, false)));
+    vector<vector<int>> sol(n, vector<int> (h, 0));
     set_start_point(sol, sol_bit);
     solve_greedy(sol, sol_bit);
     eval = eval_sol(sol, sol_bit);
