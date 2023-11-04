@@ -200,9 +200,13 @@ void convert_auxiliars(){
         int first_ind = shift_map[it->first];
         vector<string> splitted = split(it->second, '|');
         for (string shift : splitted){
+            if (shift == splitted[splitted.size() - 1]){
+                shift.erase(shift.size() - 1);
+            }
             map<string, int>::iterator found = shift_map.find(shift);
             if (found == shift_map.end()) continue;
 
+            
             int second_ind = found->second;
             R_t_k[second_ind][first_ind] = true;
         }
@@ -224,23 +228,27 @@ void convert_auxiliars(){
 
 int eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<bool>>> sol_bit){
     // evaluate hard constraints, adding BIG penalty for each one.
+    int staff = sol.size();
     int penalty = 0;
-    vector<int> total_min (n, 0);
-    vector<vector<int>> person_turn_qty(n, vector<int>(CT, 0));
+    vector<int> total_min (staff, 0);
+    vector<vector<int>> person_turn_qty(staff, vector<int>(CT, 0));
     bool is_broken_1, is_broken_2;
     
-    for (int i = 0; i < n; i++){
+    for (int i = 0; i < staff; i++){
+        int curr_days = sol[i].size();
         for (int t = 0; t < CT; t++){
-            for (int d = 0; d < h; d++){
+            for (int d = 0; d < curr_days; d++){
                 if (t == 0){
                     is_broken_1 = ((!(sol_bit[i][d][t]) && LO_i_d[i][d]) == 1);
-                    penalty += is_broken_1 * PENALTY_COST * 2; // Mandatory days-off (13)
+                    penalty += is_broken_1 * PENALTY_COST; // Mandatory days-off (13)
                     broken_h_constr += is_broken_1;
                 }
                 else{
-                    if (d != h - 1){
-                        int next_day_turn = sol[i][d + 1];
-                        is_broken_1 = (R_t_k[next_day_turn][t] * sol_bit[i][d][t] != 0);
+                    if (d != 0){
+                        int previous_day_turn = sol[i][d - 1];
+                        // cout << "Anterior: " << previous_day_turn << " " << t << " " << sol_bit[i][d][t] << endl;
+                        is_broken_1 = ((R_t_k[t][previous_day_turn] && sol_bit[i][d][t]) == 1);
+                        // cout << is_broken_1 << endl;
                         penalty += is_broken_1 * PENALTY_COST; // Consecutive Turns (3)
                         broken_h_constr += is_broken_1;
                     }
@@ -251,7 +259,8 @@ int eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<bool>>> 
         }
     }
 
-    for (int i = 0; i < n; i++){
+    for (int i = 0; i < staff; i++){
+        int curr_days = sol[i].size();
         for (int t = 1; t < CT; t++){
             is_broken_1 = (person_turn_qty[i][t] > T_i_t[i][t]);
             penalty += is_broken_1? (person_turn_qty[i][t] - T_i_t[i][t]) * PENALTY_COST: 0; // (4)
@@ -259,44 +268,52 @@ int eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<bool>>> 
         }
         is_broken_1 = (total_min[i] < MI_i[i]);
         is_broken_2 = (total_min[i] > MA_i[i]);
-        penalty += is_broken_1? PENALTY_COST: 0; // (5)
-        penalty += is_broken_2? PENALTY_COST: 0; // (5)
+        penalty += is_broken_1? PENALTY_COST * (MI_i[i] - total_min[i]) / 1000 : 0; // (5)
+        penalty += is_broken_2? PENALTY_COST * (total_min[i] - MA_i[i]) / 1000 : 0; // (5)
+        // penalty += is_broken_1? (MI_i[i] - total_min[i]) * PENALTY_COST / 10: 0; // (5)
+        // penalty += is_broken_2? (total_min[i] - MA_i[i]) * PENALTY_COST / 10: 0; // (5)
         broken_h_constr += is_broken_1 + is_broken_2;
     }
     // (6 - 10)  
-    for (int i = 0; i < n; i++){
+    for (int i = 0; i < staff; i++){
+        int curr_days = sol[i].size();
         int work_streak = 0;
         int off_streak = 0;
-        for (int d = 0; d < h; d++){
-            if (sol[i][d] != 0){
+        for (int d = 0; d < curr_days; d++){
+            // if (curr_days < DL_i[i]) continue;
+            if (sol[i][d] != 0 && curr_days > DL_i[i]){
                 is_broken_1 = (off_streak != 0 && off_streak < DL_i[i]);
                 penalty += is_broken_1 * PENALTY_COST; // (9 - 10) 
                 broken_h_constr += is_broken_1;
                 work_streak += 1;
                 off_streak = 0;
             }
-            else{
-                is_broken_1 = (work_streak != 0 && work_streak < CMI_i[i]);
-                penalty += is_broken_1? (CMI_i[i] - work_streak) * PENALTY_COST / 10: 0; // (6 - 7)
-                is_broken_2 = (work_streak != 0 && work_streak > CMA_i[i]);
-                penalty += is_broken_2? (work_streak - CMA_i[i]) * PENALTY_COST / 10: 0; // (8)
+            else if(curr_days > CMI_i[i]){
+            // else{
+                is_broken_1 = (work_streak != 0 && !LO_i_d[i][d] && work_streak < CMI_i[i]);
+                penalty += is_broken_1? (CMI_i[i] - work_streak) * PENALTY_COST: 0; // (6 - 7)
+                is_broken_2 = (work_streak != 0 && !LO_i_d[i][d] && work_streak > CMA_i[i]);
+                penalty += is_broken_2? (work_streak - CMA_i[i]) * PENALTY_COST: 0; // (8)
                 broken_h_constr += is_broken_1 + is_broken_2;
-                work_streak = 0;
+
+                work_streak = LO_i_d[i][d]? work_streak : 0;
                 off_streak += !(LO_i_d[i][d]); // Mandatory days off don't count in constraint (9 - 10)
             }
         }
     }
 
     // (11 - 12)
-    vector<int> weekends_worked (n, 0);
-    for (int i = 0; i < n; i++){
-        for (int l = 0; l < h / 7; l++){
-            int sunday = (l + 1) * 7 - 1;
-            weekends_worked[i] += ((sol[i][sunday - 1] != 0) + (sol[i][sunday] != 0)); // (12)
+    vector<int> weekends_worked (staff, 0);
+    for (int i = 0; i < staff; i++){
+        int curr_days = sol[i].size();
+        if (curr_days > 5){
+            for (int d = 0; d < curr_days; d++){
+                weekends_worked[i] += (d % 6 == 0) || (d % 6 == 5)? sol[i][d] != 0: 0; // (12)
+            }
+            is_broken_1 = (weekends_worked[i] > FM_i[i]);
+            penalty += is_broken_1? PENALTY_COST : 0; // Max weekends that can be assigned (11)
+            broken_h_constr += is_broken_1;
         }
-        is_broken_1 = (weekends_worked[i] > FM_i[i]);
-        penalty += is_broken_1? (weekends_worked[i] - FM_i[i]) * PENALTY_COST * 2 : 0; // Max weekends that can be assigned (11)
-        broken_h_constr += is_broken_1;
     }
 
     penalty = penalty < 0? 10000000 - penalty : penalty; // Stop over flow
@@ -306,11 +323,14 @@ int eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<bool>>> 
 
 int eval_soft_constraints(vector<vector<int>> sol, vector<vector<vector<bool>>> sol_bit){
     //  evaluate soft constraints, adding penalty and counter per worker.
+    int staff = sol.size();
+    int days = sol[0].size();
     int penalty = 0;
     int penalty_get = 0;
-    for (int i = 0; i < n; i++){
+    for (int i = 0; i < staff; i++){
+        int curr_days = sol[i].size();
         for (int t = 1; t < CT; t++){
-            for (int d = 0; d < h; d++){
+            for (int d = 0; d < curr_days; d++){
                 day_turn_qty[d][t] += sol_bit[i][d][t]; // Over Staff and Under Staff (14 - 17)
                 
                 penalty_get = sol_bit[i][d][t] * PAT_i_d_t[i][d][t];
@@ -324,8 +344,8 @@ int eval_soft_constraints(vector<vector<int>> sol, vector<vector<vector<bool>>> 
         }
     }
 
-    penalty_day_turn.resize(h, vector<int>(CT, 0));
-    for (int d = 0; d < h; d++){ // (14 - 17)
+    penalty_day_turn.resize(days, vector<int>(CT, 0));
+    for (int d = 0; d < days; d++){ // (14 - 17)
         int p_amount = 0;
         for (int t = 1; t < CT; t++){
             p_amount = (day_turn_qty[d][t] > S_d_t[d][t]) * OS_d_t[d][t];
@@ -342,12 +362,14 @@ int eval_soft_constraints(vector<vector<int>> sol, vector<vector<vector<bool>>> 
 
 int eval_sol(vector<vector<int>> sol, vector<vector<vector<bool>>> sol_bit){
     // Returns the total penalty for the solution
+    int staff = sol.size();
+    int days = sol[0].size();
     day_turn_qty.clear();
-    day_turn_qty.resize(h, vector<int>(CT, 0));
+    day_turn_qty.resize(days, vector<int>(CT, 0));
     penalty_day_turn.clear();
-    penalty_day_turn.resize(h, vector<int>(CT, 0));
+    penalty_day_turn.resize(days, vector<int>(CT, 0));
     penalty_per_worker.clear();
-    penalty_per_worker.resize(n, 0);
+    penalty_per_worker.resize(staff, 0);
     broken_h_constr = 0;
     int hard_penalty = eval_hard_constraints(sol, sol_bit);
     int soft_penalty = eval_soft_constraints(sol, sol_bit);
@@ -361,44 +383,59 @@ void set_y_from_x(vector<vector<vector<bool>>>& y, int x, int i, int d, int t){
 }
 
 void set_start_point(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit){
-    for (int i = 0; i < n; i++){
-        for (int d = 0; d < h; d++){
-            sol[i][d] = 1;
-            set_y_from_x(sol_bit, 1, i, d, 0);
-        }
-    }
+    int turn = 1;
+    sol.push_back(vector<int>(1, turn));
+    sol_bit.push_back(vector<vector<bool>>(1, vector<bool>(CT, false)));
+    sol_bit[0][0][turn] = true;
 }
 
 void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit){
     // Checks turns per worker per day, and chooses the one that minimizes the function.
     for (int i = 0; i < n; i++){
+        // cout << i << endl;
         for (int d = 0; d < h; d++){
+            // cout << "Dia: " << d << endl;
+            
             int original_t = sol[i][d];
             int min_eval = eval_sol(sol, sol_bit);
             int min_turn = original_t;
+
             for (int t = 0; t < CT; t++){
+                // cout << "Turno: " << t << endl;
                 if (t == original_t) continue;
-                // cout << sol[i][d] << endl;
+
                 int prev_shift = sol[i][d];
                 sol[i][d] = t;
                 set_y_from_x(sol_bit, t, i, d, prev_shift);
                 int new_eval = eval_sol(sol, sol_bit);
-                // cout << new_eval << endl;
                 int is_min = new_eval <= min_eval;
                 min_eval = is_min? new_eval : min_eval;
                 min_turn = is_min? t : min_turn;
             }
-            cout << min_eval << endl;
-            // cout << min_turn << endl;
+            // cout << min_eval << endl;
             int prev_shift = sol[i][d];
             sol[i][d] = min_turn;
             set_y_from_x(sol_bit, min_turn, i, d, prev_shift);
+
+            if (d < h - 1){
+                sol[i].push_back(1);
+                sol_bit[i].push_back(vector<bool>(CT, false));
+                sol_bit[i][d+1][1] = true;
+            }
+        }
+
+        if (i < n - 1){
+            sol.push_back(vector<int>(1, 1));
+            sol_bit.push_back(vector<vector<bool>>(1, vector<bool>(CT, false)));
+            sol_bit[i + 1][0][1] = true;
         }
     }
     return;
 }
 
 void print_result(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit){
+    int staff = sol.size();
+    int days = sol[staff - 1].size();
     ofstream out_file("Instancia.out");
     out_file << "#Funcion Objetivo" << endl;
     out_file << eval << endl;
@@ -473,13 +510,11 @@ int main()
 {
     read_instance();
     convert_auxiliars();
-    vector<vector<vector<bool>>> sol_bit(n, vector<vector<bool>>(h, vector<bool>(CT, false)));
-    vector<vector<int>> sol(n, vector<int> (h, 0));
+    vector<vector<vector<bool>>> sol_bit;
+    vector<vector<int>> sol;
     set_start_point(sol, sol_bit);
     solve_greedy(sol, sol_bit);
     eval = eval_sol(sol, sol_bit);
     print_result(sol, sol_bit);
-
-
     return 0;
 }
