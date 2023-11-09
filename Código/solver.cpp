@@ -388,6 +388,135 @@ int eval_sol(vector<vector<int>> sol, vector<vector<vector<bool>>> sol_bit){
     return hard_penalty + soft_penalty;
 }
 
+int eval_hard_greedy(vector<vector<int>> sol, vector<vector<vector<bool>>> sol_bit){
+    // evaluate hard constraints, adding BIG penalty for each one.
+    int curr_staff = sol.size() - 1;
+    int curr_days = sol[curr_staff].size();
+    int i = curr_staff;
+    int penalty = 0;
+    int total_min = 0;
+    vector<int> person_turn_qty(CT, 0);
+    bool is_broken_1, is_broken_2;
+    
+    for (int t = 0; t < CT; t++){
+        for (int d = 0; d < curr_days; d++){
+            if (t == 0){
+                is_broken_1 = ((!(sol_bit[i][d][t]) && LO_i_d[i][d]) == 1);
+                // if (is_broken_1) cout << "Restriccion dias libres obligatorios rota" << endl;
+                penalty += is_broken_1 * PENALTY_COST; // Mandatory days-off (13)
+                broken_h_constr += is_broken_1;
+            }
+            else{
+                if (d != 0){
+                    int previous_day_turn = sol[i][d - 1];
+                    is_broken_1 = ((R_t_k[t][previous_day_turn] && sol_bit[i][d][t]) == 1);
+                    // if (is_broken_1) cout << "Restriccion turnos consecutivos rota" << endl;
+                    penalty += is_broken_1 * PENALTY_COST; // Consecutive Turns (3)
+                    broken_h_constr += is_broken_1;
+                }
+                person_turn_qty[t] += sol_bit[i][d][t]; // Turns per person per shift (4)                
+                total_min += sol_bit[i][d][t] * L_t[t - 1]; // Minutes per person (5)
+            }
+        }
+    }
+
+    for (int t = 1; t < CT; t++){
+        is_broken_1 = (person_turn_qty[t] > T_i_t[i][t]);
+        // if (is_broken_1) cout << "Restriccion cantidad de tipo de turno por persona rota" << endl;
+        penalty += is_broken_1? (person_turn_qty[t] - T_i_t[i][t]) * PENALTY_COST: 0; // (4)
+        broken_h_constr += is_broken_1;
+    }
+    is_broken_1 = (total_min < MI_i[i]);
+    // if (is_broken_1) cout << "Restriccion minimo de minutos rota" << endl;
+    is_broken_2 = (total_min > MA_i[i]);
+    // if (is_broken_2) cout << "Restriccion máximo de minutos rota" << endl;
+    penalty += is_broken_1? (MI_i[i] - total_min) : 0; // (5)
+    penalty += is_broken_2? (total_min - MA_i[i]) : 0; // (5)
+    broken_h_constr += is_broken_1 + is_broken_2;
+
+    // (6 - 10)  
+    int work_streak = 0;
+    int off_streak = 0;
+    for (int d = 0; d < curr_days; d++){
+        if (sol[i][d] != 0 && curr_days >= DL_i[i]){
+            work_streak += 1;
+            if (curr_days < h){ // Needed to help greedy solution
+                if (d % 7 == 5) penalty += PENALTY_COST;
+                int max_broken = work_streak > CMA_i[i];
+                // if (max_broken) cout << "Restriccion maximo turnos consecutivos rota" << endl;
+                penalty += max_broken? PENALTY_COST: 0;
+                broken_h_constr += max_broken;
+            }
+            
+            is_broken_1 = (off_streak != 0 && off_streak < DL_i[i]);
+            // if (is_broken_1) cout << "Restriccion minimo de días libres consecutivos rota" << endl;
+            penalty += is_broken_1 * PENALTY_COST; // (9 - 10) 
+            broken_h_constr += is_broken_1;
+            off_streak = 0;
+        }
+        else if(sol[i][d] == 0 && curr_days >= CMI_i[i]){
+            // bool off_broken = off_streak < DL_i[i];
+            // penalty += off_broken? PENALTY_COST: 0;
+            off_streak += off_streak == 0? !LO_i_d[i][d]: 1; 
+            is_broken_1 = (work_streak != 0 && !LO_i_d[i][d] && work_streak < CMI_i[i]);
+            // if (is_broken_1) cout << "Restriccion minimo de turnos consecutivos rota" << endl;
+            penalty += is_broken_1? PENALTY_COST: 0; // (6 - 7)
+            is_broken_2 = (work_streak != 0 && work_streak > CMA_i[i]);
+            // if (is_broken_2) cout << "Restriccion maximo de turnos consecutivos rota" << endl;
+            penalty += is_broken_2? PENALTY_COST: 0; // (8)
+            broken_h_constr += is_broken_1 + is_broken_2;
+
+            work_streak = 0;
+        }
+    }
+
+    // (11 - 12)
+    int weekends_worked = 0;
+    if (curr_days >= 5) {
+        for (int d = 0; d < curr_days; d++){
+            weekends_worked += ((d % 7 == 6) || (d % 7 == 5))? sol[i][d] != 0: 0; // (12)
+        }
+        is_broken_1 = (weekends_worked > FM_i[i]);
+        // if (is_broken_1) cout << "Restriccion fin de semanas trabajando rota" << endl;
+        penalty += is_broken_1? PENALTY_COST : 0; // Max weekends that can be assigned (11)
+        broken_h_constr += is_broken_1;
+    }
+
+    penalty = penalty < 0? 10000000 - penalty : penalty; // Stop over flow
+
+    return penalty;
+}
+
+int eval_soft_greedy(vector<vector<int>> sol, vector<vector<vector<bool>>> sol_bit){
+    //  evaluate soft constraints, adding penalty and counter per worker.
+    int curr_staff = sol.size() - 1;
+    int curr_days = sol[curr_staff].size();
+    int i = curr_staff;
+    int penalty = 0;
+    int penalty_get = 0;
+
+    for (int t = 1; t < CT; t++){
+        for (int d = 0; d < curr_days; d++){
+            penalty_get = sol_bit[i][d][t] * PAT_i_d_t[i][d][t];
+            penalty += penalty_get;
+            penalty_per_worker[i] += penalty_get != 0;
+
+            penalty_get = (sol_bit[i][d][t] == 0) * PNAT_i_d_t[i][d][t];
+            penalty += penalty_get;
+            penalty_per_worker[i] += penalty_get != 0;
+        }
+    }
+
+    return penalty;
+}
+
+int eval_greedy_sol(vector<vector<int>> sol, vector<vector<vector<bool>>> sol_bit){
+    // Returns the total penalty for greedy solution
+    int hard_penalty = eval_hard_greedy(sol, sol_bit);
+    // int soft_penalty = eval_soft_greedy(sol, sol_bit);
+    return hard_penalty;
+}
+
 void set_y_from_x(vector<vector<vector<bool>>>& y, int x, int i, int d, int t){
     // Changes y_i_d_t value and updates y_i_d_x. CALLED AFTER UPDATING NUMERIC SOLUTION
     y[i][d][t] = 0;
@@ -406,7 +535,7 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
     for (int i = 0; i < n; i++){
         for (int d = 0; d < h; d++){
             int original_t = sol[i][d];
-            int min_eval = eval_sol(sol, sol_bit);
+            int min_eval = eval_greedy_sol(sol, sol_bit);
             int min_turn = original_t;
 
             for (int t = 0; t < CT; t++){
@@ -415,12 +544,12 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
                 int prev_shift = sol[i][d];
                 sol[i][d] = t;
                 set_y_from_x(sol_bit, t, i, d, prev_shift);
-                int new_eval = eval_sol(sol, sol_bit);
+                int new_eval = eval_greedy_sol(sol, sol_bit);
                 int is_min = new_eval <= min_eval;
                 min_eval = is_min? new_eval : min_eval;
                 min_turn = is_min? t : min_turn;
             }
-            // cout << min_eval << endl;
+            cout << min_eval << endl;
             int prev_shift = sol[i][d];
             sol[i][d] = min_turn;
             set_y_from_x(sol_bit, min_turn, i, d, prev_shift);
