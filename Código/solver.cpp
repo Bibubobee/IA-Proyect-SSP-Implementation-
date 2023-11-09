@@ -555,7 +555,7 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
     for (int i = 0; i < n; i++){
         for (int d = 0; d < h; d++){
             int original_t = sol[i][d];
-            int min_eval = eval_greedy_sol(aux_sol, aux_sol_bit);
+            int min_eval = eval_greedy_sol(sol, sol_bit);
             int min_turn = original_t;
 
             for (int t = 0; t < CT; t++){
@@ -565,7 +565,7 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
                 int prev_shift = sol[i][d];
                 sol[i][d] = t;
                 set_y_from_x(sol_bit, t, i, d, prev_shift);
-                int new_eval = eval_greedy_sol(aux_sol, aux_sol_bit);
+                int new_eval = eval_greedy_sol(sol, sol_bit);
                 bool is_min = new_eval < min_eval;
                 bool is_equal = new_eval == min_eval;
                 if (is_equal){ // if equal, then choose the one that has more turn available
