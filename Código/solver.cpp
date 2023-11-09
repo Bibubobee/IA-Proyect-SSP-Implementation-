@@ -513,8 +513,8 @@ int eval_soft_greedy(vector<vector<int>> sol, vector<vector<vector<bool>>> sol_b
 int eval_greedy_sol(vector<vector<int>> sol, vector<vector<vector<bool>>> sol_bit){
     // Returns the total penalty for greedy solution
     int hard_penalty = eval_hard_greedy(sol, sol_bit);
-    // int soft_penalty = eval_soft_greedy(sol, sol_bit);
-    return hard_penalty;
+    int soft_penalty = eval_soft_greedy(sol, sol_bit);
+    return hard_penalty + soft_penalty;
 }
 
 void set_y_from_x(vector<vector<vector<bool>>>& y, int x, int i, int d, int t){
