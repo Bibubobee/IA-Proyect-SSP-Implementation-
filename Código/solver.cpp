@@ -609,6 +609,62 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
     return;
 }
 
+void shift_flip(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit, int i, int d){
+    // changes shift for employee i in day d to the next one
+    int prev_shift = sol[i][d];
+    int new_shift = (sol[i][d] + 1) % (CT + 1);
+    sol[i][d] = new_shift;
+    set_y_from_x(sol_bit, new_shift, i, d, prev_shift);
+}
+
+void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit){
+    // Handles the complete tabu search algorithm, setting iterations, list size and implements algorithm behaviour.
+    int iterations = n*h;
+
+    vector<vector<int>> local_best(sol); // Saving the best solution in the iteration
+    vector<vector<vector<bool>>> local_best_bit(sol_bit);
+    vector<vector<int>> curr_sol; // This is the one that will change
+    vector<vector<vector<bool>>> curr_sol_bit;
+    
+    
+    int global_min_eval = 100000000;
+    int local_min_eval;
+    // Tabu list struct defined in another cpp
+    for (int k = 0; k < iterations; k++){
+        local_min_eval = 100000000;
+        curr_sol = local_best;
+        curr_sol_bit = local_best_bit;
+
+        for (int i = 0; i < n; i++){
+            for (int d = 0; d < h; d++){
+                int prev_shift = curr_sol[i][d];
+                shift_flip(curr_sol, curr_sol_bit, i, d);
+                int new_shift = curr_sol[i][d];
+                int eval = eval_sol(curr_sol, curr_sol_bit);
+                bool is_local_min = eval < local_min_eval;
+                if (is_local_min){ // Update local minimum
+                    local_min_eval = eval;
+                    local_best = curr_sol;
+                    local_best_bit = curr_sol_bit;
+                }
+                // Change solution back to its original state, because TS checks neighborhood
+                curr_sol[i][d] = prev_shift;
+                set_y_from_x(curr_sol_bit, prev_shift, i, d, new_shift); 
+            }
+        }
+
+        bool is_new_min = local_min_eval < global_min_eval;
+        if (is_new_min){ // update global minimum
+            global_min_eval = local_min_eval;
+            sol = local_best;
+            sol_bit = local_best_bit;
+        }
+        
+    }
+    
+    return;
+}
+
 void print_result(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit){
     int staff = sol.size();
     int days = sol[staff - 1].size();
@@ -690,6 +746,10 @@ int main()
     vector<vector<int>> sol;
     set_start_point(sol, sol_bit);
     solve_greedy(sol, sol_bit);
+
+    eval = eval_sol(sol, sol_bit);
+    cout << "Greedy resuelto: " << eval << endl; 
+    tabu_search(sol, sol_bit);
 
     cout << "Informacion sobre solución final" << endl;
     eval = eval_sol(sol, sol_bit);
