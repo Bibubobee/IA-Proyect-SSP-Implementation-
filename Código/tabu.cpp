@@ -98,7 +98,7 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
         }
         is_broken_1 = (weekends_worked[i] > FM_i[i]);
         if (is_broken_1) cout << "Restriccion fin de semanas trabajando rota" << endl;
-        penalty += is_broken_1? PENALTY_COST : 0; // Max weekends that can be assigned (11)
+        penalty += is_broken_1? (weekends_worked[i] - FM_i[i]) * PENALTY_COST : 0; // Max weekends that can be assigned (11)
         broken_h_constr += is_broken_1;
         
     }
@@ -232,7 +232,7 @@ int eval_hard_constraints(vector<int> sol, vector<vector<bool>> sol_bit, int i){
         weekends_worked += ((d % 7 == 6) || (d % 7 == 5))? sol[d] != 0: 0; // (12)
     }
     is_broken_1 = (weekends_worked > FM_i[i]);
-    penalty += is_broken_1? PENALTY_COST : 0; // Max weekends that can be assigned (11)
+    penalty += is_broken_1? (weekends_worked - FM_i[i]) * PENALTY_COST : 0; // Max weekends that can be assigned (11)
     broken_h_constr += is_broken_1;
 
     penalty = penalty < 0? 10000000 - penalty : penalty; // Stop over flow
@@ -311,7 +311,6 @@ void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit
     // Tabu list struct defined in another cpp
     for (int k = 0; k < iterations; k++){ // Tabu Iterations
         int begin_time = clock();
-        // cout << k << endl;
         local_min_eval = 100000000;
         string movement;
 
@@ -339,7 +338,7 @@ void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit
                 int new_eval = eval_tabu_sol(worker_week, bit_week, i, d, new_shift, prev_shift);
                 bool is_local_min = new_eval < local_min_eval;
                 if (is_local_min){ // Update local minimum
-                    // cout << "MINIMO ITER " << k << " Valor: " << new_eval << " P " << i << " D " << d << endl;
+                    cout << "MINIMO ITER " << k << " Valor: " << new_eval << " P " << i << " D " << d << endl;
                     curr_sol[i] = worker_week;
                     curr_sol_bit[i] = bit_week;
                     local_min_eval = new_eval;
