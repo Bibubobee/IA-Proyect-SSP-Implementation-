@@ -22,7 +22,7 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
             for (int d = 0; d < curr_days; d++){
                 if (t == 0){
                     is_broken_1 = ((!(sol_bit[i][d][t]) && LO_i_d[i][d]) == 1);
-                    // if (is_broken_1) cout << "Restriccion dias libres obligatorios rota" << endl;
+                    if (is_broken_1) cout << "Restriccion dias libres obligatorios rota" << endl;
                     penalty += is_broken_1 * PENALTY_COST; // Mandatory days-off (13)
                     broken_h_constr += is_broken_1;
                 }
@@ -30,7 +30,7 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
                     if (d != 0){
                         int previous_day_turn = sol[i][d - 1];
                         is_broken_1 = ((R_t_k[t][previous_day_turn] && sol_bit[i][d][t]) == 1);
-                        // if (is_broken_1) cout << "Restriccion turnos consecutivos rota" << endl;
+                        if (is_broken_1) cout << "Restriccion turnos consecutivos rota" << endl;
                         penalty += is_broken_1 * PENALTY_COST; // Consecutive Turns (3)
                         broken_h_constr += is_broken_1;
                     }
@@ -44,14 +44,14 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
     for (int i = 0; i < staff; i++){
         for (int t = 1; t < CT; t++){
             is_broken_1 = (person_turn_qty[i][t] > T_i_t[i][t]);
-            // if (is_broken_1) cout << "Restriccion cantidad de tipo de turno por persona rota" << endl;
+            if (is_broken_1) cout << "Restriccion cantidad de tipo de turno por persona rota" << endl;
             penalty += is_broken_1? (person_turn_qty[i][t] - T_i_t[i][t]) * PENALTY_COST: 0; // (4)
             broken_h_constr += is_broken_1;
         }
         is_broken_1 = (total_min[i] < MI_i[i]);
-        // if (is_broken_1) cout <<  "Empleado " << staff_map_inv[i] << " no trabajó minimo de minutos" << endl;
+        if (is_broken_1) cout <<  "Empleado " << staff_map_inv[i] << " no trabajó minimo de minutos" << endl;
         is_broken_2 = (total_min[i] > MA_i[i]);
-        // if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que el máximo de minutos" << endl;
+        if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que el máximo de minutos" << endl;
         penalty += is_broken_1? (MI_i[i] - total_min[i]) : 0; // (5)
         penalty += is_broken_2? (total_min[i] - MA_i[i]) : 0; // (5)
         broken_h_constr += is_broken_1 + is_broken_2;
@@ -66,7 +66,7 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
                 work_streak += 1;
                 
                 is_broken_1 = (off_streak != 0 && off_streak < DL_i[i]);
-                // if (is_broken_1) cout << "Restriccion minimo de días libres consecutivos rota" << endl;
+                if (is_broken_1) cout << "Restriccion minimo de días libres consecutivos rota" << endl;
                 penalty += is_broken_1 * (DL_i[i] - off_streak) * PENALTY_COST; // (9 - 10) 
                 broken_h_constr += is_broken_1;
                 off_streak = 0;
@@ -76,10 +76,10 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
                 // penalty += off_broken? PENALTY_COST: 0;
                 off_streak += off_streak == 0? !LO_i_d[i][d]: 1;
                 is_broken_1 = (work_streak != 0 && !LO_i_d[i][d] && work_streak < CMI_i[i]);
-                // if (is_broken_1) cout << "Empleado " << staff_map_inv[i] << " no trabajó minimo de turnos consecutivos" << endl;
+                if (is_broken_1) cout << "Empleado " << staff_map_inv[i] << " no trabajó minimo de turnos consecutivos" << endl;
                 penalty += is_broken_1? (CMI_i[i] - work_streak) * PENALTY_COST: 0; // (6 - 7)
                 is_broken_2 = (work_streak != 0 && work_streak > CMA_i[i]);
-                // if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que maximo de turnos consecutivos" << endl;
+                if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que maximo de turnos consecutivos" << endl;
                 penalty += is_broken_2? (work_streak - CMA_i[i]) * PENALTY_COST: 0; // (8)
                 broken_h_constr += is_broken_1 + is_broken_2;
 
@@ -97,7 +97,7 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
             weekends_worked[i] += ((d % 7 == 6) || (d % 7 == 5))? sol[i][d] != 0: 0; // (12)
         }
         is_broken_1 = (weekends_worked[i] > FM_i[i]);
-        // if (is_broken_1) cout << "Restriccion fin de semanas trabajando rota" << endl;
+        if (is_broken_1) cout << "Restriccion fin de semanas trabajando rota" << endl;
         penalty += is_broken_1? PENALTY_COST : 0; // Max weekends that can be assigned (11)
         broken_h_constr += is_broken_1;
         
@@ -176,7 +176,6 @@ int eval_hard_constraints(vector<int> sol, vector<vector<bool>> sol_bit, int i){
         for (int d = 0; d < h; d++){
             if (t == 0){
                 is_broken_1 = ((!(sol_bit[d][t]) && LO_i_d[i][d]) == 1);
-                // if (is_broken_1) cout << "Restriccion dias libres obligatorios rota" << endl;
                 penalty += is_broken_1 * PENALTY_COST; // Mandatory days-off (13)
                 broken_h_constr += is_broken_1;
             }
@@ -184,7 +183,6 @@ int eval_hard_constraints(vector<int> sol, vector<vector<bool>> sol_bit, int i){
                 if (d != 0){
                     int previous_day_turn = sol[d - 1];
                     is_broken_1 = ((R_t_k[t][previous_day_turn] && sol_bit[d][t]) == 1);
-                    // if (is_broken_1) cout << "Restriccion turnos consecutivos rota" << endl;
                     penalty += is_broken_1 * PENALTY_COST; // Consecutive Turns (3)
                     broken_h_constr += is_broken_1;
                 }
@@ -196,14 +194,11 @@ int eval_hard_constraints(vector<int> sol, vector<vector<bool>> sol_bit, int i){
 
     for (int t = 1; t < CT; t++){
         is_broken_1 = (person_turn_qty[t] > T_i_t[i][t]);
-        // if (is_broken_1) cout << "Restriccion cantidad de tipo de turno por persona rota" << endl;
         penalty += is_broken_1? (person_turn_qty[t] - T_i_t[i][t]) * PENALTY_COST: 0; // (4)
         broken_h_constr += is_broken_1;
     }
     is_broken_1 = (total_min < MI_i[i]);
-    // if (is_broken_1) cout <<  "Empleado " << staff_map_inv[i] << " no trabajó minimo de minutos" << endl;
     is_broken_2 = (total_min > MA_i[i]);
-    // if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que el máximo de minutos" << endl;
     penalty += is_broken_1? (MI_i[i] - total_min) : 0; // (5)
     penalty += is_broken_2? (total_min - MA_i[i]) : 0; // (5)
     broken_h_constr += is_broken_1 + is_broken_2;
@@ -215,7 +210,6 @@ int eval_hard_constraints(vector<int> sol, vector<vector<bool>> sol_bit, int i){
         if (sol[d] != 0){
             work_streak += 1;
             is_broken_1 = (off_streak != 0 && off_streak < DL_i[i]);
-            // if (is_broken_1) cout << "Restriccion minimo de días libres consecutivos rota" << endl;
             penalty += is_broken_1 * (DL_i[i] - off_streak) * PENALTY_COST; // (9 - 10) 
             broken_h_constr += is_broken_1;
             off_streak = 0;
@@ -223,10 +217,8 @@ int eval_hard_constraints(vector<int> sol, vector<vector<bool>> sol_bit, int i){
         else if(sol[d] == 0){
             off_streak += off_streak == 0? !LO_i_d[i][d]: 1;
             is_broken_1 = (work_streak != 0 && !LO_i_d[i][d] && work_streak < CMI_i[i]);
-            // if (is_broken_1) cout << "Empleado " << staff_map_inv[i] << " no trabajó minimo de turnos consecutivos" << endl;
             penalty += is_broken_1? (CMI_i[i] - work_streak) * PENALTY_COST: 0; // (6 - 7)
             is_broken_2 = (work_streak != 0 && work_streak > CMA_i[i]);
-            // if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que maximo de turnos consecutivos" << endl;
             penalty += is_broken_2? (work_streak - CMA_i[i]) * PENALTY_COST: 0; // (8)
             broken_h_constr += is_broken_1 + is_broken_2;
 
@@ -240,7 +232,6 @@ int eval_hard_constraints(vector<int> sol, vector<vector<bool>> sol_bit, int i){
         weekends_worked += ((d % 7 == 6) || (d % 7 == 5))? sol[d] != 0: 0; // (12)
     }
     is_broken_1 = (weekends_worked > FM_i[i]);
-    // if (is_broken_1) cout << "Restriccion fin de semanas trabajando rota" << endl;
     penalty += is_broken_1? PENALTY_COST : 0; // Max weekends that can be assigned (11)
     broken_h_constr += is_broken_1;
 
