@@ -185,7 +185,7 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
                     min_turn = is_min? t : min_turn;
                 }
             }
-            cout << min_eval << endl;
+            // cout << min_eval << endl;
             int prev_aux_shift = aux_sol[d];
             aux_sol[d] = min_turn;
             set_y_from_x(aux_sol_bit, min_turn, d, prev_aux_shift);
