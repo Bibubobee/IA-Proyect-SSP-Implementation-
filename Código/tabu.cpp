@@ -22,7 +22,7 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
             for (int d = 0; d < curr_days; d++){
                 if (t == 0){
                     is_broken_1 = ((!(sol_bit[i][d][t]) && LO_i_d[i][d]) == 1);
-                    if (is_broken_1) cout << "Restriccion dias libres obligatorios rota" << endl;
+                    // if (is_broken_1) cout << "Restriccion dias libres obligatorios rota" << endl;
                     penalty += is_broken_1 * PENALTY_COST; // Mandatory days-off (13)
                     broken_h_constr += is_broken_1;
                 }
@@ -30,7 +30,7 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
                     if (d != 0){
                         int previous_day_turn = sol[i][d - 1];
                         is_broken_1 = ((R_t_k[t][previous_day_turn] && sol_bit[i][d][t]) == 1);
-                        if (is_broken_1) cout << "Restriccion turnos consecutivos rota" << endl;
+                        // if (is_broken_1) cout << "Restriccion turnos consecutivos rota" << endl;
                         penalty += is_broken_1 * PENALTY_COST; // Consecutive Turns (3)
                         broken_h_constr += is_broken_1;
                     }
@@ -44,14 +44,14 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
     for (int i = 0; i < staff; i++){
         for (int t = 1; t < CT; t++){
             is_broken_1 = (person_turn_qty[i][t] > T_i_t[i][t]);
-            if (is_broken_1) cout << "Restriccion cantidad de tipo de turno por persona rota" << endl;
+            // if (is_broken_1) cout << "Restriccion cantidad de tipo de turno por persona rota" << endl;
             penalty += is_broken_1? (person_turn_qty[i][t] - T_i_t[i][t]) * PENALTY_COST: 0; // (4)
             broken_h_constr += is_broken_1;
         }
         is_broken_1 = (total_min[i] < MI_i[i]);
-        if (is_broken_1) cout <<  "Empleado " << staff_map_inv[i] << " no trabajó minimo de minutos" << endl;
+        // if (is_broken_1) cout <<  "Empleado " << staff_map_inv[i] << " no trabajó minimo de minutos" << endl;
         is_broken_2 = (total_min[i] > MA_i[i]);
-        if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que el máximo de minutos" << endl;
+        // if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que el máximo de minutos" << endl;
         penalty += is_broken_1? (MI_i[i] - total_min[i]) : 0; // (5)
         penalty += is_broken_2? (total_min[i] - MA_i[i]) : 0; // (5)
         broken_h_constr += is_broken_1 + is_broken_2;
@@ -66,7 +66,7 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
                 work_streak += 1;
                 
                 is_broken_1 = (off_streak != 0 && off_streak < DL_i[i]);
-                if (is_broken_1) cout << "Restriccion minimo de días libres consecutivos rota" << endl;
+                // if (is_broken_1) cout << "Restriccion minimo de días libres consecutivos rota" << endl;
                 penalty += is_broken_1 * (DL_i[i] - off_streak) * PENALTY_COST; // (9 - 10) 
                 broken_h_constr += is_broken_1;
                 off_streak = 0;
@@ -76,10 +76,10 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
                 // penalty += off_broken? PENALTY_COST: 0;
                 off_streak += off_streak == 0? !LO_i_d[i][d]: 1;
                 is_broken_1 = (work_streak != 0 && !LO_i_d[i][d] && work_streak < CMI_i[i]);
-                if (is_broken_1) cout << "Empleado " << staff_map_inv[i] << " no trabajó minimo de turnos consecutivos" << endl;
+                // if (is_broken_1) cout << "Empleado " << staff_map_inv[i] << " no trabajó minimo de turnos consecutivos" << endl;
                 penalty += is_broken_1? (CMI_i[i] - work_streak) * PENALTY_COST: 0; // (6 - 7)
                 is_broken_2 = (work_streak != 0 && work_streak > CMA_i[i]);
-                if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que maximo de turnos consecutivos" << endl;
+                // if (is_broken_2) cout <<  "Empleado " << staff_map_inv[i] << " trabajó más que maximo de turnos consecutivos" << endl;
                 penalty += is_broken_2? (work_streak - CMA_i[i]) * PENALTY_COST: 0; // (8)
                 broken_h_constr += is_broken_1 + is_broken_2;
 
@@ -97,7 +97,7 @@ int full_eval_hard_constraints(vector<vector<int>> sol, vector<vector<vector<boo
             weekends_worked[i] += ((d % 7 == 6) || (d % 7 == 5))? sol[i][d] != 0: 0; // (12)
         }
         is_broken_1 = (weekends_worked[i] > FM_i[i]);
-        if (is_broken_1) cout << "Restriccion fin de semanas trabajando rota" << endl;
+        // if (is_broken_1) cout << "Restriccion fin de semanas trabajando rota" << endl;
         penalty += is_broken_1? (weekends_worked[i] - FM_i[i]) * PENALTY_COST : 0; // Max weekends that can be assigned (11)
         broken_h_constr += is_broken_1;
         
@@ -293,13 +293,13 @@ void shift_flip(vector<int>& sol, vector<vector<bool>>& sol_bit, int i, int d){
 
 void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit){
     // Handles the complete tabu search algorithm, setting iterations, list size and implements algorithm behaviour.
-    int iterations = n*h;
+    int iterations = 100;
 
     vector<vector<int>> local_best(sol); // Saving the best solution in the iteration
     vector<vector<vector<bool>>> local_best_bit(sol_bit);
     vector<vector<int>> curr_sol(sol); // This is the one that will change
     vector<vector<vector<bool>>> curr_sol_bit(sol_bit);
-    FixedQueue<string, 2> tabu_list;
+    FixedQueue<string, 3> tabu_list;
     vector<int> worker_week;
     vector<vector<bool>> bit_week;
     
@@ -307,6 +307,7 @@ void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit
     int best_d;
     int turn_pre_best;
 
+    int global_min_eval = eval;
     int local_min_eval;
     // Tabu list struct defined in another cpp
     for (int k = 0; k < iterations; k++){ // Tabu Iterations
@@ -338,7 +339,7 @@ void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit
                 int new_eval = eval_tabu_sol(worker_week, bit_week, i, d, new_shift, prev_shift);
                 bool is_local_min = new_eval < local_min_eval;
                 if (is_local_min){ // Update local minimum
-                    cout << "MINIMO ITER " << k << " Valor: " << new_eval << " P " << i << " D " << d << endl;
+                    // cout << "MINIMO ITER " << k << " Valor: " << new_eval << " P " << i << " D " << d << endl;
                     curr_sol[i] = worker_week;
                     curr_sol_bit[i] = bit_week;
                     local_min_eval = new_eval;
@@ -367,14 +368,13 @@ void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit
         curr_sol = local_best;
         curr_sol_bit = local_best_bit;
         // cout << clock() - begin_time << endl;
+        int tabu_eval = full_eval_sol(local_best, local_best_bit);
+        if (tabu_eval < global_min_eval){
+            global_min_eval = tabu_eval;
+            sol = local_best;
+            sol_bit = local_best_bit;
+            cout << global_min_eval << endl;
+        }
     }
-
-    int tabu_eval = full_eval_sol(local_best, local_best_bit);
-    cout << tabu_eval << endl;
-    if (tabu_eval < eval){
-        sol = local_best;
-        sol_bit = local_best_bit;
-    }
-    
     return;
 }
