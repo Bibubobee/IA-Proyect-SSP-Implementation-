@@ -28,6 +28,8 @@ vector<int> CMA_i; // Max consecutive turns
 vector<int> CMI_i; // Min consecutive turns 
 vector<int> DL_i; // Min consecutive days-off per worker i
 vector<int> FM_i; // Max weekends working per worker i
+
+// Necessary for output format with turns and workers called "A", "B", etc
 map<string, int> shift_map;
 map<int, string> shift_map_inv;
 map<string, int> staff_map;

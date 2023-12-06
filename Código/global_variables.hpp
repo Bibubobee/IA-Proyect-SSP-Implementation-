@@ -40,7 +40,7 @@ extern std::map<int, std::string> staff_map_inv;
 extern std::vector<std::vector<int>> day_turn_qty;
 extern std::vector<int> penalty_per_worker; // Neccesary for output
 extern std::vector<std::vector<int>> penalty_day_turn; // Neccesary for output
-const int PENALTY_COST = 1000;
+const int PENALTY_COST = 1000; // Penalty for hard constraints
 extern int eval;
 extern int broken_h_constr;
 

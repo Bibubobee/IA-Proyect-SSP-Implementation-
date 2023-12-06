@@ -9,6 +9,7 @@ using namespace std;
 
 int eval_hard_greedy(vector<int> sol, vector<vector<bool>> sol_bit, int i){
     // evaluate hard constraints, adding BIG penalty for each one.
+    // Commented prints are useful to know which constraints are being broken
     int curr_days = sol.size();
     int penalty = 0;
     int total_min = 0;
@@ -167,7 +168,7 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
 
             for (int t = 0; t < CT; t++){
                 if (t == original_t) continue;
-                if (t != 0 && Turns_left_to_i[i][t] == 0) continue; // Don't check turns that are impossible
+                if (t != 0 && Turns_left_to_i[i][t] == 0) continue; // Don't check turns that are impossible to do
 
                 int prev_shift = aux_sol[d];
                 aux_sol[d] = t;
@@ -180,12 +181,13 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
                     min_eval = is_turn_more_available? new_eval : min_eval;
                     min_turn = is_turn_more_available? t : min_turn;
                 }
-                else {
-                    min_eval = is_min? new_eval : min_eval;
-                    min_turn = is_min? t : min_turn;
+                else if(is_min) {
+                    min_eval = new_eval;
+                    min_turn = t;
                 }
             }
-            // cout << min_eval << endl;
+            // cout << min_eval << endl; // Un-comment to see how solution improves
+            // Put best turn in solution
             int prev_aux_shift = aux_sol[d];
             aux_sol[d] = min_turn;
             set_y_from_x(aux_sol_bit, min_turn, d, prev_aux_shift);
@@ -194,7 +196,7 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
             sol[i][d] = min_turn;
             set_y_from_x(sol_bit, min_turn, i, d, prev_sol_shift);
 
-            if (d < h - 1){
+            if (d < h - 1){ // Add another day to the solution
                 sol[i].push_back(1);
                 sol_bit[i].push_back(vector<bool>(CT, false));
                 sol_bit[i][d+1][1] = true;
@@ -205,7 +207,7 @@ void solve_greedy(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
             }
         }
 
-        if (i < n - 1){
+        if (i < n - 1){ // Add another worker to the solution
             sol.push_back(vector<int>(1, 1));
             sol_bit.push_back(vector<vector<bool>>(1, vector<bool>(CT, false)));
             sol_bit[i + 1][0][1] = true;

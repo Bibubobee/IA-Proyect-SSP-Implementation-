@@ -9,9 +9,9 @@
 using namespace std;
 
 
-// length of the string  
-int len(string str)  
-{  
+
+int len(string str) {
+    // length of the string    
     int length = 0;  
     for (int i = 0; str[i] != '\0'; i++)  
     {  
@@ -20,10 +20,9 @@ int len(string str)
     }  
     return length;     
 }  
-  
-// create custom split() function  
-vector<string> split (string str, char separator)  
-{  
+   
+vector<string> split (string str, char separator)  { 
+    // custom split function 
     vector<string> strings;
     int currIndex = 0, i = 0;  
     int startIndex = 0, endIndex = 0;  
@@ -270,7 +269,7 @@ void print_result(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bi
 int main()
 {
     read_instance();
-    convert_auxiliars();
+    convert_auxiliars(); // to change maps into vectors
     vector<vector<vector<bool>>> sol_bit;
     vector<vector<int>> sol;
     set_start_point(sol, sol_bit);
@@ -279,8 +278,9 @@ int main()
     eval = full_eval_sol(sol, sol_bit);
     tabu_search(sol, sol_bit);
 
-    cout << "Informacion sobre solución final" << endl;
+    cout << "Informacion sobre el experimento" << endl;
     cout << "Greedy: " << eval << endl; 
+    cout << "Dias: " << h << " Empleados: " << n << " Turnos: " << CT << endl;
     eval = full_eval_sol(sol, sol_bit);
     print_result(sol, sol_bit);
     return 0;

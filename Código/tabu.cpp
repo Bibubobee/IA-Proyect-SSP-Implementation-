@@ -246,10 +246,9 @@ int eval_soft_constraints(vector<int> sol, vector<vector<bool>> sol_bit, int i, 
     int penalty_get = 0;
 
     // Turn 0 doesn't matter
+    // day_turn_qty is defined in full eval, just after the greedy function, setting the numbers for tabu search
     int this_qty = day_turn_qty[d][t] + 1; // Over Staff and Under Staff (14 - 17)
     int prev_qty = day_turn_qty[d][prev_turn] - 1;
-
-    // cout << "CANTIDAD DEL DÍA " << this_qty << " " << prev_qty << endl;
     
     penalty_get = sol_bit[d][t] * PAT_i_d_t[i][d][t];
     penalty += penalty_get;
@@ -269,7 +268,6 @@ int eval_soft_constraints(vector<int> sol, vector<vector<bool>> sol_bit, int i, 
 int eval_tabu_sol(vector<int> sol, vector<vector<bool>> sol_bit, int staff_index, int d, int t, int prev_turn){
     // Returns the total penalty for the solution
     // Soft constraints depend heavily in post-greedy evaluation
-
     int hard_penalty = eval_hard_constraints(sol, sol_bit, staff_index);
     int soft_penalty = eval_soft_constraints(sol, sol_bit, staff_index, d, t, prev_turn);
     return hard_penalty + soft_penalty;
@@ -293,16 +291,15 @@ void shift_flip(vector<int>& sol, vector<vector<bool>>& sol_bit, int i, int d){
 
 void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit){
     // Handles the complete tabu search algorithm, setting iterations, list size and implements algorithm behaviour.
-    int iterations = 100;
+    int iterations = 250;
 
     vector<vector<int>> local_best(sol); // Saving the best solution in the iteration
     vector<vector<vector<bool>>> local_best_bit(sol_bit);
-    vector<vector<int>> curr_sol(sol); // This is the one that will change
-    vector<vector<vector<bool>>> curr_sol_bit(sol_bit);
-    FixedQueue<string, 3> tabu_list;
-    vector<int> worker_week;
-    vector<vector<bool>> bit_week;
+    FixedQueue<string, 70> tabu_list;
+    vector<int> worker_period;
+    vector<vector<bool>> bit_period;
     
+    int best_i;
     int best_t;
     int best_d;
     int turn_pre_best;
@@ -311,14 +308,13 @@ void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit
     int local_min_eval;
     // Tabu list struct defined in another cpp
     for (int k = 0; k < iterations; k++){ // Tabu Iterations
-        int begin_time = clock();
         local_min_eval = 100000000;
         string movement;
 
         // Generate neighborhood
         for (int i = 0; i < n; i++){
-            worker_week = curr_sol[i];
-            bit_week = curr_sol_bit[i];
+            worker_period = local_best[i];
+            bit_period = local_best_bit[i];
             for (int d = 0; d < h; d++){
                 // Check if movement is tabu, if it is, then don't do it.
                 string curr_move = "f" + to_string(i) + to_string(d);
@@ -332,48 +328,41 @@ void tabu_search(vector<vector<int>>& sol, vector<vector<vector<bool>>>& sol_bit
                 if (is_tabu) continue;
 
                 // Evaluate and compare new solution
-                int prev_shift = worker_week[d];
-                shift_flip(worker_week, bit_week, i, d);
-                int new_shift = worker_week[d];
+                int prev_shift = worker_period[d];
+                shift_flip(worker_period, bit_period, i, d);
+                int new_shift = worker_period[d];
 
-                int new_eval = eval_tabu_sol(worker_week, bit_week, i, d, new_shift, prev_shift);
+                int new_eval = eval_tabu_sol(worker_period, bit_period, i, d, new_shift, prev_shift);
                 bool is_local_min = new_eval < local_min_eval;
-                if (is_local_min){ // Update local minimum
-                    // cout << "MINIMO ITER " << k << " Valor: " << new_eval << " P " << i << " D " << d << endl;
-                    curr_sol[i] = worker_week;
-                    curr_sol_bit[i] = bit_week;
+                if (is_local_min){ // Save movement and caracteristics of min f(x)
                     local_min_eval = new_eval;
-                    local_best = curr_sol;
-                    local_best_bit = curr_sol_bit;
                     movement = curr_move;
                     best_t = new_shift;
-                    turn_pre_best = prev_shift;
+                    best_i = i;
                     best_d = d;
+                    turn_pre_best = prev_shift;
                 }
                 // Change solution back to its original state, because TS checks neighborhood
-                worker_week[d] = prev_shift;
-                bit_week[d][prev_shift] = true;
-                bit_week[d][new_shift] = false;
+                worker_period[d] = prev_shift;
+                bit_period[d][prev_shift] = true;
+                bit_period[d][new_shift] = false;
 
-                curr_sol[i] = worker_week;
-                curr_sol_bit[i] = bit_week;
                 if (local_min_eval == 0) break; // cut early if already optimized locality
             }
             if (local_min_eval == 0) break;
         }
         // Best move already selected
         tabu_list.push(movement);
+        local_best[best_i][best_d] = best_t;
+        set_y_from_x(local_best_bit, best_t, best_i, best_d, turn_pre_best);
         day_turn_qty[best_d][best_t] += 1;
         day_turn_qty[best_d][turn_pre_best] -= 1;
-        curr_sol = local_best;
-        curr_sol_bit = local_best_bit;
-        // cout << clock() - begin_time << endl;
         int tabu_eval = full_eval_sol(local_best, local_best_bit);
         if (tabu_eval < global_min_eval){
             global_min_eval = tabu_eval;
             sol = local_best;
             sol_bit = local_best_bit;
-            cout << global_min_eval << endl;
+            // cout << global_min_eval << endl; // Un-comment if want to see how the solution improves
         }
     }
     return;
